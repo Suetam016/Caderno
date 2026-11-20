@@ -1,0 +1,1 @@
+window.PAINEL_VERSAO="2026-11-20T18:30";
