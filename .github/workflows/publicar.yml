@@ -1,0 +1,44 @@
+name: publicar painel
+on:
+  push:
+    branches: [main]
+    paths: ['dados/painel.enc']
+  workflow_dispatch:
+permissions:
+  contents: write
+  pages: write
+concurrency: publicar
+jobs:
+  publicar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.12' }
+      - run: pip install -q cryptography
+      - name: cifrar com a senha
+        env:
+          PAINEL_SENHA: ${{ secrets.PAINEL_SENHA }}
+          PAINEL_CHAVE_DADOS: ${{ secrets.PAINEL_CHAVE_DADOS }}
+        run: |
+          set -e
+          [ -n "$PAINEL_SENHA" ] && [ -n "$PAINEL_CHAVE_DADOS" ] || { echo "faltam os secrets PAINEL_SENHA / PAINEL_CHAVE_DADOS"; exit 1; }
+          T=$(mktemp -d)
+          python3 - "$T/p.html" <<'PY'
+          import os,sys,base64
+          from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+          b=open('dados/painel.enc','rb').read()
+          k=base64.b64decode(os.environ['PAINEL_CHAVE_DADOS'])
+          open(sys.argv[1],'wb').write(AESGCM(k).decrypt(b[:12],b[12:],None))
+          PY
+          printf '%s' "$PAINEL_SENHA" > "$T/pw"
+          python3 tools/encrypt.py "$T/p.html" "$T/pw" index.html > /dev/null
+          rm -rf "$T"
+      - name: commit
+        run: |
+          git config user.name Suetam016; git config user.email Suetam016@users.noreply.github.com
+          git add index.html
+          git diff --cached --quiet || { git commit -qm "atualiza (nuvem)"; git push -q; }
+      - name: rebuild pages
+        env: { GH_TOKEN: '${{ github.token }}' }
+        run: gh api -X POST repos/${{ github.repository }}/pages/builds || true
