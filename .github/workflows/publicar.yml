@@ -18,11 +18,12 @@ jobs:
       - run: pip install -q cryptography
       - name: chave publica e painel
         env:
-          PAINEL_SENHA: ${{ secrets.PAINEL_SENHA }}
+          PAINEL_SENHA: ${{ secrets.SENHA_CADERNO || secrets.PAINEL_SENHA }}
         run: |
           set -e
-          [ -n "$PAINEL_SENHA" ] || { echo "falta o secret PAINEL_SENHA"; exit 1; }
+          [ -n "$PAINEL_SENHA" ] || { echo "falta o secret SENHA_CADERNO"; exit 1; }
           T=$(mktemp -d); printf '%s' "$PAINEL_SENHA" > "$T/pw"
+          python3 tools/confere.py "$T/pw" index.html || { rm -rf "$T"; exit 3; }
           python3 tools/nuvem.py pub "$T/pw" tools/nuvem.pub
           if [ -f dados/painel.enc ] && python3 tools/nuvem.py dec "$T/pw" dados/painel.enc "$T/p.html"; then
             python3 tools/encrypt.py "$T/p.html" "$T/pw" index.html > /dev/null
