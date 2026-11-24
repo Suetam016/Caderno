@@ -43,7 +43,7 @@ async function open_(raw){
   const h=new TextDecoder().decode(await crypto.subtle.decrypt({name:"AES-GCM",iv:u(D.i)},k,u(D.c)));
   return h;
 }
-function show(h,k){window.__CADKEY=k;document.open();document.write(h);document.close()}
+function show(h,k){window.__CADKEY=k;document.querySelectorAll("style").forEach(x=>x.remove());document.body.removeAttribute("style");document.open();document.write(h);document.close()}
 async function derive(pw){
   const b=await crypto.subtle.importKey("raw",new TextEncoder().encode(pw),"PBKDF2",false,["deriveBits"]);
   return crypto.subtle.deriveBits({name:"PBKDF2",hash:"SHA-256",salt:u(D.s),iterations:D.n},b,256);
